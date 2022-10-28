@@ -1,0 +1,47 @@
+{% macro render_field(field) %}
+  <div class="form-group row col-10 mt-5" id="div_{{ field.id }}">
+    <label for="{{ field.id }}" class="form-control-label">{{ field.label }}</label>
+    {% if field.errors %}
+      {{ field(class="form-control is-invalid") }}
+    {% else %}
+      {{ field(class="form-control") }}
+    {% endif %}
+    {% if field.errors %}
+      <div class="invalid-feedback">
+        {{ field.errors[0] }}
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro render_field_table_vertical(field) %}
+  <div class="form-group d-table-row col-12" id="div_{{ field.id }}">
+    <label for="{{ field.id }}" class="form-control-label d-table-cell">{{ field.label }}</label>
+    {% if field.errors %}
+      {{ field(class="form-control d-table-cell is-invalid") }}
+    {% else %}
+      {{ field(class="form-control d-table-cell") }}
+    {% endif %}
+    {% if field.errors %}
+      <div class="invalid-feedback">
+        {{ field.errors[0] }}
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro render_field_table_horizontal_no_label(field) %}
+<div class="form-group d-table-cell align-top" id="div_{{ field.id }}">
+  <label for="{{ field.id }}" class="form-control-label sr-only d-table-cell">{{ field.label }}</label>
+  {% if field.errors %}
+    {{ field(class="form-control is-invalid") }}
+  {% else %}
+    {{ field(class="form-control") }}
+  {% endif %}
+  {% if field.errors %}
+    <div class="invalid-feedback">
+      {{ field.errors[0] }}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

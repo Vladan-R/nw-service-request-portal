@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="row my-3">
+    <h1>About NW Site Staging Portal</h1>
+</div>
+
+<div class="row my-3">
+    <p>You are working with the <em>example</em> version.</p>
+</div>
+<div class="row my-3"></div>
+    <h4>Usage</h4>
+    <strong>Step 1: Fill out form at Customer1 > Service Request Data Form</strong><br>
+    You will get YAML data file.<br>
+    <strong>Step 2: Upload the YAML data file at Customer1 > Engineering upload</strong><br>
+    You will be presented with a list of files including device configs, implementation plan and hw ordering list.<br>
+    <strong>Step 3: Render NW diagram based on the provided data</strong><br>
+    You can render the diagram by using button below the above mentioned list of files<br>
+    or by going to APP_URL/customer1/diagram-render/service_request_number<br><br>
+
+
+    <h4>Deployment information</h4>
+    This was deployed in production within two Docker containers:<br>
+    * container1: NGINX<br>
+    * container2: uWSGI + app<br>
+    <br>
+    NGINX, uWSGI config files as well as docker-compose.yml are included in this repository.
+</div>
+
+{% endblock %}

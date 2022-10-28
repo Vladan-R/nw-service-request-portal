@@ -1,0 +1,150 @@
+{# SET VARIABLES BASED ON FORM INPUT -#}
+{% if rds['idf'][0]['switch_count'] == '0.55' or rds['idf'][0]['switch_count'] == '1' -%}
+	{% set stack_num = 2 -%}
+	{% set port_num = 24 -%}
+{% else -%}
+	{% set stack_num = rds['idf'][0]['switch_count'] | int -%}
+	{% set port_num = 48 -%}
+{% endif -%}
+{# /SET VARIABLES BASED ON FORM INPUT -#}
+! Catalyst WS-C3650 & WS-C3850 series - Stacked Configuration (up to 9 switches in stack)
+! created by: {{rds['userid']}}
+! e-mail: {{rds['userid']}}@example.com
+! date: {{date}}
+!
+hostname {{rds['site']['code']}}_S01-1
+!
+enable secret $3cr3T
+!
+clock timezone GMT 0
+!
+vtp domain {{rds['site']['code']}}
+vtp mode transparent
+!
+{% for vlan in rds['vlan'] -%}
+vlan {{vlan['vlan_id']}}
+ name {{vlan['vlan_name']}}
+!
+{% endfor -%}
+!
+ip tftp source-interface Vlan{{rds['vlan'][1]['vlan_id']}}
+ip ftp source-interface Vlan{{rds['vlan'][1]['vlan_id']}}
+!
+interface GigabitEthernet0/0
+shutdown
+!
+interface GigabitEthernet1/0/1
+ {% if rds['site']['primary_wan_type'] == 'mpls' -%}
+ description R01_Gi0/0/0
+ {% elif rds['site']['primary_wan_type'] == 'isp1' -%}
+ description ISP1_PRIMARY_ROUTER
+ {% else -%}
+ description PRIMARY_WAN
+ {% endif -%}
+ switchport mode trunk
+ no shutdown
+!
+interface GigabitEthernet2/0/1
+ {% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+ description R02_Gi0/0/0
+ {% elif rds['site']['secondary_wan_type'] == 'isp1' -%}
+ description ISP1_SECONDARY_ROUTER
+ {% elif rds['site']['secondary_wan_type'] == 'isp2' -%}
+ description ISP2_SECONDARY_ROUTER
+ {% else -%}
+ description BACKUP_WAN
+ {% endif -%}
+ switchport mode trunk
+ no shutdown
+!
+{% for member in range(1,stack_num+1) -%}
+{% if member in [1, 2] -%}
+interface range GigabitEthernet{{member}}/0/2 - {{port_num-port_reservation[member-1]|length}}
+{% else -%}
+interface range GigabitEthernet{{member}}/0/1 - {{port_num-port_reservation[member-1]|length}}
+{% endif -%}
+ description USER&VOICE
+ switchport mode access
+ switchport access vlan {{rds['vlan'][0]['vlan_id']}}
+ switchport voice vlan {{rds['vlan'][2]['vlan_id']}}
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+{% for req in range(port_reservation[member-1]|length) -%}
+interface GigabitEthernet{{member}}/0/{{port_num - port_reservation[member-1]|length + 1 + req}}
+description {{port_reservation[member-1][req]}}
+switchport mode access
+{% if port_reservation[member-1][req] == 'CAMERA' -%}
+switchport access vlan {{rds['vlan'][1]['vlan_id']}}
+{% elif port_reservation[member-1][req] == 'PRINTER' -%}
+switchport access vlan {{rds['vlan'][2]['vlan_id']}}
+{% elif port_reservation[member-1][req] == 'SERVER' -%}
+switchport access vlan {{rds['vlan'][4]['vlan_id']}}
+{% else -%}
+switchport access vlan {{rds['vlan'][0]['vlan_id']}}
+{% endif -%}
+spanning-tree portfast
+spanning-tree bpduguard enable
+no shutdown
+!
+{% endfor -%}
+{% endfor -%}
+!
+{% for idf in range(1,rds['idf']|length) -%}
+interface Po{{idf}}
+ description IDF{{idf}}
+ switchport trunk pruning vlan none
+ switchport mode trunk
+ no shutdown
+!
+{% endfor -%}
+{% for member in range(1,stack_num+1) -%}
+{% if uplinks[member-1]|length > 0 -%}
+{% for port in range(1, uplinks[member-1]|length +1)  -%}
+interface GigabitEthernet{{member}}/1/{{port}}
+ description IDF{{uplinks[member-1][port-1]}}
+ switchport mode trunk
+ channel-group {{uplinks[member-1][port-1]}} mode active
+ no shutdown
+!
+{% endfor -%}
+{% endif -%}
+{% if uplinks[member-1]|length < 3 -%}
+interface range GigabitEthernet{{member}}/1/{{uplinks[member-1]|length +1}} - 4
+ description RESERVED
+ shutdown
+!
+{% else -%}
+interface GigabitEthernet{{member}}/1/4
+ description RESERVED
+ shutdown
+!
+{% endif -%}
+{% endfor -%}
+!
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan{{rds['vlan'][1]['vlan_id']}}
+ ip address {{rds['vlan'][1]['net'] | ip_and_mask(rds['vlan'][1]['mask'], 5, " ")}}
+ no shutdown
+!
+ip default-gateway {{rds['vlan'][1]['net'] | ip_increment(1)}}
+!
+line con 0
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+line vty 0 15
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+ntp source Vlan{{rds['vlan'][1]['vlan_id']}}
+ntp server 10.0.123.1 prefer
+ntp server 10.0.123.2
+end

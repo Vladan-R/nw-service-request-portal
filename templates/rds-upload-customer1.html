@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% from "_util_forms.html" import render_field, render_field_table_vertical, render_field_table_horizontal_no_label %}
+
+
+{% block content %}
+<div class="row mt-3">
+    <h1>Upload for Assigned Engineer</h1>
+</div>
+<br>
+<div class="rdsFormWrapper">
+    <form class= "form" method="POST" action="/le/customer1/rds-upload" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+        {{ render_field(form.rds_file) }}
+        {{ form.submit(class='btn btn-primary my-3') }}
+    </form>
+</div>
+{% endblock %}

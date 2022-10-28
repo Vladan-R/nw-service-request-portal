@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/success.css') }}" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block content %}
+<div class="home">
+    <h1>Success</h1>
+    <p>Form has been submitted successfully!</p>
+</div>
+{% endblock %}

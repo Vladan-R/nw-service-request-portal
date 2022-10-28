@@ -1,0 +1,118 @@
+{# SET VARIABLES BASED ON FORM INPUT -#}
+{% if rds['wan'][1]['physical_handoff'] == 'copper' -%}
+	{% set wan_active_int = 'GigabitEthernet0/2' -%}
+	{% set wan_inactive_int = 'GigabitEthernet0/1' -%}
+	{% set media_type = 'rj45' -%}
+{% else -%}
+	{% set wan_active_int = 'GigabitEthernet0/1' -%}
+	{% set wan_inactive_int = 'GigabitEthernet0/2' -%}
+	{% set media_type = 'sfp' -%}
+{% endif -%}
+{# /SET VARIABLES BASED ON FORM INPUT -#}
+!
+! created by: {{rds['userid']}}
+! e-mail: {{rds['userid']}}@example.com
+! date: {{date}}
+!
+hostname {{rds['site']['code']}}_R{{rds['wan'][1]['router_num']}}
+!
+interface {{wan_active_int}}
+ description WAN MPLS {{rds['wan'][1]['access_id']}} {{rds['wan'][1]['port_id']}} Connection to AS {{rds['wan'][1]['pe_as']}}
+ bandwidth {{rds['wan'][1]['speed']}}
+ media-type {{media_type}}
+ {% if rds['wan'][1]['logical_handoff'] == 'p2p' -%}
+ ip address {{rds['wan'][1]['net'] | ip_and_mask(rds['wan'][1]['mask'], 2, " ")}}
+ no shutdown
+ {% elif rds['wan'][1]['logical_handoff'] == 'vlan' -%}
+ no shutdown
+!
+interface {{wan_active_int}}.{{rds['wan'][1]['transit_vlan']}}
+ bandwidth {{rds['wan'][1]['speed']}}
+ encapsulation dot1Q {{rds['wan'][1]['transit_vlan']}}
+ ip address {{rds['wan'][1]['net'] | ip_and_mask(rds['wan'][1]['mask'], 2, " ")}}
+ no shutdown
+{% endif -%}
+!
+track 1 interface {{wan_active_int}} line-protocol
+!
+interface Loopback0
+ description Management Interface
+ ip address {{rds['wan'][1]['loopback_ip']}} 255.255.255.255
+ no shutdown
+!
+interface GigabitEthernet0/0
+ description {{rds['site']['code']}}_S01
+ no shutdown
+!
+{% for vlan in rds['vlan'] -%}
+interface GigabitEthernet0/0.{{vlan['vlan_id']}}
+ description {{vlan['vlan_name']}}
+ encapsulation dot1Q {{vlan['vlan_id']}}
+ ip address {{vlan['net'] | ip_and_mask(vlan['mask'], 2, " ")}}
+ {% if vlan['vlan_id'] < 100 -%}
+ {% if rds['site']['secondary_wan_type'] == 'isp1' -%}
+ vrrp {{vlan['vlan_id']}} ip {{vlan['net'] | ip_increment(1)}}
+ vrrp {{vlan['vlan_id']}} priority 120
+ vrrp {{vlan['vlan_id']}} track 1 decrement 100
+ {% else -%}
+ standby {{vlan['vlan_id']}} ip {{vlan['net'] | ip_increment(1)}}
+ standby {{vlan['vlan_id']}} priority 120
+ standby {{vlan['vlan_id']}} track 1 decrement 100
+ {% endif -%}
+ {% else -%}
+ {% if rds['site']['secondary_wan_type'] == 'isp1' -%}
+ vrrp 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} ip {{vlan['net'] | ip_increment(1)}}
+ vrrp 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} priority 120
+ vrrp 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} track 1 decrement 100
+ {% else -%}
+ standby 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} ip {{vlan['net'] | ip_increment(1)}}
+ standby 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} priority 120
+ standby 3{{vlan['vlan_id'] | string | truncate(1, True, "", 0)}} track 1 decrement 100
+ {% endif -%}
+ {% endif -%}
+ no shutdown
+!
+{% endfor -%}
+!
+interface {{wan_inactive_int}}
+ shutdown
+ description UNMANAGED SPARE INTERFACE
+!
+router bgp {{rds['wan'][1]['ce_as']}}
+ bgp router-id {{rds['wan'][1]['loopback_ip']}}
+ bgp log-neighbor-changes
+ neighbor {{rds['wan'][1]['net'] | ip_increment(1)}} remote-as {{rds['wan'][1]['pe_as']}}
+!
+ address-family ipv4
+ neighbor {{rds['wan'][1]['net'] | ip_increment(1)}} activate
+ {% for vlan in rds['vlan'] -%}
+ network {{vlan['net'] | ip_and_mask(vlan['mask'], 0, " mask ")}}
+ {% endfor -%}
+ network {{rds['wan'][1]['loopback_ip']}} mask 255.255.255.255
+ {% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+ network {{rds['wan'][0]['loopback_ip']}} mask 255.255.255.255
+ {% endif -%}
+ network {{rds['wan'][1]['net']}} mask 255.255.255.252
+exit-address-family
+!
+ip route 0.0.0.0 0.0.0.0 {{rds['wan'][1]['net'] | ip_increment(1)}} 250
+ip route 0.0.0.0 0.0.0.0 {{rds['vlan'][1]['net'] | ip_increment(2)}} 200
+!
+line con 0
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+line aux 0
+ exec-timeout 15 0
+ session-timeout 15
+!
+line vty 0 15
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+ntp source Loopback0
+ntp server 10.0.123.1 prefer
+ntp server 10.0.123.2
+end

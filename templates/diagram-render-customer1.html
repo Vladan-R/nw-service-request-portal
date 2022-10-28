@@ -1,0 +1,552 @@
+{% extends "layout_diagram.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{url_for('static',filename='css/joint.css')}}">
+{% endblock %}
+
+{% block content %}
+<div id="map-parent-div" class="row d-flex justify-content-center">
+    <div id="paper-holder" class="m-3 border border-dark rounded"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{url_for('static',filename='js/lodash.min.js')}}"></script>
+<script src="{{url_for('static',filename='js/backbone.min.js')}}"></script>
+<script src="{{url_for('static',filename='js/joint.shapes.devs.js')}}"></script>
+<script src="{{url_for('static',filename='js/joint.js')}}"></script>
+
+<script type="text/javascript">
+
+// START: definitions of paper, models, functions, etc.
+    var diagram = new joint.dia.Graph;
+
+    var paper = new joint.dia.Paper({
+        el: document.getElementById('paper-holder'),
+        model: diagram,
+        width: 1600,
+        height: 900,
+        gridSize: 1
+    });
+
+// START: define attributes shared by the elements
+//    var element_stroke_color = '#31d0c6';
+//    var element_stroke_color = '#0182ad';
+//    var element_stroke_color = '#d0e8f0';
+    var element_stroke_color = '#7fb2cc';
+    var element_fill_color = '#d0e8f0';
+    var element_text_color = '#343a40';
+
+    var smf = '#dc3545';    // single mode fiber
+    var mmf = '#dc3545';    // multi mode fiber
+    var copper = '#343a40';
+
+//    var element_text_color = '#6a6c8a';
+// END: define attributes shared by the elements
+
+    // below function makes it impossible for child element to leave boundaries of parent element
+    diagram.on('change:position', function(cell) {
+
+        var parentId = cell.get('parent');
+        if (!parentId) return;
+
+        var parent = diagram.getCell(parentId);
+        var parentBbox = parent.getBBox();
+        var cellBbox = cell.getBBox();
+
+        if (parentBbox.containsPoint(cellBbox.origin()) &&
+        parentBbox.containsPoint(cellBbox.topRight()) &&
+        parentBbox.containsPoint(cellBbox.corner()) &&
+        parentBbox.containsPoint(cellBbox.bottomLeft())) {
+            // All the four corners of the child are inside
+            // the parent area.
+            return;
+        }
+        // Revert the child position.
+        cell.set('position', cell.previous('position'));
+    });
+
+    joint.shapes.devs.CircleModel = joint.shapes.devs.Model.extend({
+
+        markup: '<g class="rotatable"><g class="scalable"><circle class="body"/></g><text class="label"/><g class="inPorts"/><g class="outPorts"/></g>',
+
+        defaults: joint.util.deepSupplement({
+
+            type: 'devs.CircleModel',
+            size: { width: 100, height: 100 },
+            attrs: {
+                '.body': {
+                    refCx: '50%',
+                    refCy: '50%',
+                    refR: '50%',
+                    fill: element_fill_color,
+                    stroke: element_stroke_color,
+                    'stroke-width': 2
+                },
+                '.label': {
+                    text: 'Circle Model',
+                    fill: element_text_color,
+                    'ref-y': 0.5,
+                    'y-alignment': 'middle'
+                },
+            },
+            ports: {
+                groups: {
+                    'in': {
+                        position: {
+                            name: 'ellipse',
+                            args: {
+                                dx: 1,
+                                dy: 1,
+                                dr: 1,
+                                startAngle: 90,
+                                step: 30,
+                                compensateRotation: false
+                            },
+                        },
+                        label: {
+                            position: {
+                                name: 'radialOriented'
+                            }
+                        }
+                    },
+                    'out': {
+                        position: {
+                            name: 'ellipse',
+                            args: {
+                                dx: 1,
+                                dy: 1,
+                                dr: 1,
+                                startAngle: 0,
+                                step: 30,
+                                compensateRotation: false
+                            },
+                        },
+                        label: {
+                            position: {
+                                name: 'radialOriented'
+                            }
+                        }
+                    }
+                }
+            }
+
+        }, joint.shapes.devs.Model.prototype.defaults)
+        });
+
+    joint.shapes.devs.CircleModelView = joint.shapes.devs.ModelView;
+
+
+    var wan_cloud = joint.shapes.basic.Ellipse.define('examples.WanCloud', {
+        size: { width: 300, height: 70 },
+        attrs: {
+            'ellipse': {
+                stroke: '#17a2b8',
+                'stroke-dasharray': "10 10",
+                'stroke-width': 2
+            },
+            'text': {
+                fill: element_text_color,
+            },
+        },
+    });
+
+    var switch_left = joint.shapes.devs.Model.define('examples.SwitchLeft', {
+        size: { width: 160, height: 95 },
+        attrs: {
+            '.label': {
+                'font-size': 14,
+                fill: element_text_color
+            },
+            '.body': {
+                fill: element_fill_color,
+                stroke: element_stroke_color,
+                'stroke-width': 2
+            }
+        }
+    });
+
+    var switch_bottom = joint.shapes.devs.Model.define('examples.SwitchBottom', {
+        size: { width: 160, height: 95 },
+        attrs: {
+            '.label': {
+                'font-size': 14,
+                fill: element_text_color
+            },
+            '.body': {
+                fill: element_fill_color,
+                stroke: element_stroke_color,
+                'stroke-width': 2
+            }
+        },
+        ports: {
+            groups: {
+                'in': {
+                    position: 'bottom',
+                    label: { position: 'outside' }
+                },
+                'out': {
+                    position: 'top',
+                    label: { position: 'inside' }
+                }
+            }
+        }
+    });
+
+    var switch_right = joint.shapes.devs.Model.define('examples.SwitchBottom', {
+        size: { width: 160, height: 95 },
+        attrs: {
+            '.label': {
+                'font-size': 14,
+                fill: element_text_color
+            },
+            '.body': {
+                fill: element_fill_color,
+                stroke: element_stroke_color,
+                'stroke-width': 2
+            }
+        },
+        ports: {
+            groups: {
+                'in': {
+                    position: 'right',
+                    label: { position: 'outside' }
+                },
+                'out': {
+                    position: 'left',
+                    label: { position: 'outside' }
+                }
+            }
+        }
+    });
+
+    var connect = function(source, sourcePort, target, targetPort, color) {
+
+        var link = new joint.shapes.devs.Link({
+            source: {
+                id: source.id,
+                port: sourcePort
+            },
+            target: {
+                id: target.id,
+                port: targetPort
+            },
+            attrs: {
+                '.connection': {
+                    'stroke': color
+                }
+            }
+        });
+
+        link.addTo(diagram).reparent();
+    };
+
+// END: definitions of paper, models, functions, etc.
+
+// START: company&bu images, legend, etc.
+    var company_logo = new joint.shapes.standard.Image({
+        position: { x: 1400, y: 10 },
+        size: { width: 185, height: 60 },
+        attrs: {
+            image: {
+                xlinkHref: "{{url_for('static',filename='img/company-logo-low-resolution-color-logo.png')}}"
+            }
+        }
+    });
+    company_logo.addTo(diagram);
+
+    var bu_logo = new joint.shapes.standard.Image({
+        position: { x: 10, y: 10 },
+{% if inventory['business_unit'] == 'bu1' %}
+        size: { width: 202, height: 56 },
+        attrs: {
+            image: {
+                xlinkHref: "{{url_for('static',filename='img/business-unit-1-low-resolution-logo-black-on-white-background.png')}}"
+{% else %}
+        size: { width: 183, height: 58 },
+        attrs: {
+            image: {
+                xlinkHref: "{{url_for('static',filename='img/business-units-2-4-low-resolution-logo-black-on-white-background.png')}}"
+{% endif %}
+            }
+        }
+    });
+    bu_logo.addTo(diagram);
+
+    var site_name = new joint.shapes.standard.Rectangle({
+        position: { x: 500, y: 10 },
+        size: { width: 600, height: 50 },
+        attrs: {
+            body: {
+                stroke: '#ffffff',
+            },
+            label: {
+                text: '{{inventory['site']['location']}}\n{{inventory['site']['alias']}}',
+                fontSize: 20
+            }
+        }
+    });
+    site_name.addTo(diagram);
+
+    var legend_container = new joint.shapes.standard.Rectangle({
+        position: { x: 10, y: 810 },
+        size: { width: 150, height: 70 },
+        attrs: {
+            body: {
+                stroke: '#ffffff',
+            }
+        }
+    });
+
+    var legend_text_fiber = new joint.shapes.standard.Rectangle({
+        position: { x: 20, y: 820 },
+        size: { width: 50, height: 20 },
+        attrs: {
+            body: {
+                stroke: '#ffffff',
+            },
+            label: {
+                text: 'Fiber:',
+                fontSize: 14
+            }
+        }
+    });
+
+    var legend_text_copper = new joint.shapes.standard.Rectangle({
+        position: { x: 20, y: 850 },
+        size: { width: 50, height: 20 },
+        attrs: {
+            body: {
+                stroke: '#ffffff',
+            },
+            label: {
+                text: 'Copper:',
+                fontSize: 14
+            }
+        }
+    });
+
+    var legend_line_fiber = new joint.shapes.standard.Rectangle({
+        position: { x: 80, y: 830 },
+        size: { width: 50, height: 1 },
+        attrs: {
+            body: {
+                stroke: '#dc3545',
+            },
+        }
+    });
+
+    var legend_line_copper = new joint.shapes.standard.Rectangle({
+        position: { x: 80, y: 860 },
+        size: { width: 50, height: 1 },
+        attrs: {
+            body: {
+                stroke: '#343a40',
+            },
+        }
+    });
+
+    legend_container.embed(legend_text_fiber);
+    legend_container.embed(legend_text_copper);
+    legend_container.embed(legend_line_fiber);
+    legend_container.embed(legend_line_copper);
+    legend_container.addTo(diagram);
+    legend_text_fiber.addTo(diagram);
+    legend_text_copper.addTo(diagram);
+    legend_line_fiber.addTo(diagram);
+    legend_line_copper.addTo(diagram);
+
+    var credentials = new joint.shapes.standard.Rectangle({
+        position: { x: 1350, y: 820 },
+        size: { width: 250, height: 60 },
+        attrs: {
+            body: {
+                stroke: '#ffffff',
+            },
+            label: {
+                text: 'Based on input by: {{inventory["userid"]}}\nDate created: {{date}}\nSR: {{inventory["sr_num"]}}',
+                fontSize: 14
+            }
+        }
+    });
+    credentials.addTo(diagram);
+
+// END: company&bu images, legend, etc.
+
+// START: Network diagram
+{% if inventory['access_switches']|length <= 8 and inventory['access_switches'][0]["location"] == 'MDF' %}
+{% set positions_variant = 1 %}
+var idf_positions = [
+    [10, 385],
+    [180, 790],
+    [350, 790],
+    [520, 790],
+    [690, 790],
+    [860, 790],
+    [1030, 790],
+    [1200, 790]
+    ];
+{% elif inventory['access_switches']|length <= 7 and inventory['access_switches'][0]["location"] != 'MDF' %}
+{% set positions_variant = 2 %}
+var idf_positions = [
+    [180, 790],
+    [350, 790],
+    [520, 790],
+    [690, 790],
+    [860, 790],
+    [1030, 790],
+    [1200, 790]
+    ];
+{% else %}
+{% set positions_variant = 3 %}
+var idf_positions = [
+    [10, 385],
+    [10, 485],
+    [10, 585],
+    [10, 685],
+    [180, 790],
+    [350, 790],
+    [520, 790],
+    [690, 790],
+    [860, 790],
+    [1030, 790],
+    [1200, 790],
+    [1420, 685],
+    [1420, 585],
+    [1420, 485],
+    [1420, 385]
+    ];
+{% endif %}
+
+    var s1 = new joint.shapes.devs.Model({
+        position: { x: 200, y: 200 },
+        size: { width: 1200, height: 180 },
+        attrs: {
+            text: {
+                text: '{{inventory["distro_switch"]["location"]}}:\n{{inventory["distro_switch"]["hw_count"]}}x {{inventory["distro_switch"]["model"]}}\n{{inventory["distro_switch"]["name"]}}\n{{inventory["distro_switch"]["asset_id"]}}\n{{inventory["distro_switch"]["mgmt_interface"]}}: {{inventory["distro_switch"]["mgmt_ip"]}}',
+                fill: element_text_color,
+            },
+            rect: { stroke: element_stroke_color, fill: element_fill_color, 'stroke-width': 2 },
+            },
+        inPorts: {{inventory["distro_switch"]["downlinks"] | safe}},
+        outPorts: {{inventory["distro_switch"]["uplinks"] | safe}},
+        ports: {
+            groups: {
+                'in': {
+                    position: 'bottom',
+                    label: { position: 'insideOriented' }
+                    },
+                'out': {
+                    position: 'top',
+                    label: { position: 'insideOriented' }
+                }
+            }
+        }
+    });
+    s1.addTo(diagram);
+
+    var wan_cloud1 = (new wan_cloud())
+        .position(475, 50)
+{% if inventory['primary_wan_type'] == 'mpls' %}
+        .attr('text/text', '{{inventory["wan"][0]["name"]}} {{inventory["wan"][0]["speed"]}} Mbps\nAccess ID: {{inventory["wan"][0]["access_id"]}}\nPort ID: {{inventory["wan"][0]["port_id"]}}')
+{% else %}
+        .attr('text/text', 'Internet')
+{% endif %}
+        .addTo(diagram);
+
+    var wan_cloud2 = (new wan_cloud())
+        .position(825, 50)
+{% if inventory['secondary_wan_type'] == 'mpls' %}
+        .attr('text/text', '{{inventory["wan"][1]["name"]}} {{inventory["wan"][1]["speed"]}} Mbps\nAccess ID: {{inventory["wan"][1]["access_id"]}}\nPort ID: {{inventory["wan"][1]["port_id"]}}')
+{% else %}
+        .attr('text/text', 'Internet')
+{% endif %}
+        .addTo(diagram);
+
+    var r1 = (new joint.shapes.devs.CircleModel())
+        .position(360, 85)
+        .attr({
+            text: {
+{% if inventory['primary_wan_type'] == 'mpls' %}
+                    text: '{{inventory["routers"][0]["model"]}}\n{{inventory["routers"][0]["name"]}}\n{{inventory["routers"][0]["asset_id"]}}\n{{inventory["routers"][0]["mgmt_interface"]}}: {{inventory["routers"][0]["mgmt_ip"]}}',
+					x: -130
+{% else %}
+                    text: '{{inventory["routers"][0]["name"]}}',
+{% endif %}
+                },
+        })
+{% for downlink in inventory["routers"][0]["downlinks"] %}
+        .addInPort('{{downlink | safe}}')
+{% endfor %}
+{% for uplink in inventory["routers"][0]["uplinks"] %}
+        .addOutPort('{{uplink | safe }}')
+{% endfor %}
+        .addTo(diagram);
+
+    var r2 = (new joint.shapes.devs.CircleModel())
+        .position(1160, 85)
+        .attr({
+            text: {
+{% if inventory['secondary_wan_type'] == 'mpls' %}
+                    text: '{{inventory["routers"][1]["model"]}}\n{{inventory["routers"][1]["name"]}}\n{{inventory["routers"][1]["asset_id"]}}\n{{inventory["routers"][1]["mgmt_interface"]}}: {{inventory["routers"][1]["mgmt_ip"]}}',
+					x: 130
+{% else %}
+                    text: '{{inventory["routers"][1]["name"]}}',
+{% endif %}
+                },
+        })
+{% for downlink in inventory["routers"][1]["downlinks"] %}
+        .addInPort('{{downlink | safe}}')
+{% endfor %}
+{% for uplink in inventory["routers"][1]["uplinks"] %}
+        .addOutPort('{{uplink | safe }}')
+{% endfor %}
+        .changeInGroup({ position: { args: { startAngle: -90 } } })
+        .addTo(diagram);
+
+{% for idf_num in range(inventory['access_switches']|length) %}
+{% if positions_variant == 1 and idf_num == 0 or positions_variant == 3 and idf_num < 4 %}
+    var s{{idf_num+2}} = (new switch_left())
+{% elif positions_variant == 1 and idf_num != 0 or positions_variant == 2 or positions_variant == 3 and 3 < idf_num < 11 %}
+    var s{{idf_num+2}} = (new switch_bottom())
+{% elif positions_variant == 3 and idf_num > 10 %}
+    var s{{idf_num+2}} = (new switch_right())
+{% endif %}
+        .position(idf_positions[{{idf_num}}][0], idf_positions[{{idf_num}}][1])
+        .attr('text/text', '\n{{inventory["access_switches"][idf_num]["location"]}}:\n{{inventory["access_switches"][idf_num]["hw_count"]}}x {{inventory["access_switches"][idf_num]["model"]}}\n{{inventory["access_switches"][idf_num]["name"]}}\n{{inventory["access_switches"][idf_num]["asset_id"]}}\n{{inventory["access_switches"][idf_num]["mgmt_interface"]}}: {{inventory["access_switches"][idf_num]["mgmt_ip"]}}')
+{% for downlink in inventory["access_switches"][idf_num]["downlinks"] %}
+        .addInPort('{{downlink | safe}}')
+{% endfor %}
+{% for uplink in inventory["access_switches"][idf_num]["uplinks"] %}
+        .addOutPort('{{uplink | safe }}')
+{% endfor %}
+        .addTo(diagram); 
+{% endfor %}
+
+{% for connection in inventory['connections'] %}
+    connect({{connection[0]}}, '{{connection[1]}}', {{connection[2]}}, '{{connection[3]}}', {{connection[4]}});
+{% endfor %}
+
+    var reserved_ports = new joint.shapes.standard.Rectangle({
+        position: { x: 10, y: 85 },
+        size: { width: 160, height: 295 },
+        attrs: {
+            body: {
+                stroke: '#6c757d',
+                strokeDasharray: "3 3",
+                strokeWidth: 1
+            },
+            label: {
+                text: '{{inventory["port_reservation_text"] | safe}}',
+                textVerticalAnchor: 'middle',
+                textAnchor: 'start',
+                x: -60,
+                fontSize: 14
+            }
+        }
+    });
+    reserved_ports.addTo(diagram);
+
+// END: Network diagram
+</script>
+{% endblock %}

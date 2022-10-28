@@ -1,0 +1,141 @@
+{# SET VARIABLES BASED ON FORM INPUT -#}
+{% if rds['idf']|length < 10 -%}
+	{% set port_num = 12 -%}
+{% else -%}
+	{% set port_num = 24 -%}
+{% endif -%}
+{# /SET VARIABLES BASED ON FORM INPUT -#}
+! Catalyst WS-C3650 & WS-C3850 series - Stacked Configuration (up to 9 switches in stack)
+! created by: {{rds['userid']}}
+! e-mail: {{rds['userid']}}@example.com
+! date: {{date}}
+!
+hostname {{rds['site']['code']}}_S01-1
+!
+enable secret $3cr3T
+!
+clock timezone GMT 0
+!
+vtp domain {{rds['site']['code']}}
+vtp mode transparent
+!
+{% for vlan in rds['vlan'] -%}
+vlan {{vlan['vlan_id']}}
+ name {{vlan['vlan_name']}}
+!
+{% endfor -%}
+!
+ip telnet source-interface Vlan{{rds['vlan'][1]['vlan_id']}}
+ip tftp source-interface Vlan{{rds['vlan'][1]['vlan_id']}}
+ip ftp source-interface Vlan{{rds['vlan'][1]['vlan_id']}}
+!
+interface GigabitEthernet0/0
+shutdown
+!
+interface GigabitEthernet1/0/{{port_num}}
+ {% if rds['site']['primary_wan_type'] == 'mpls' -%}
+ description R01_Gi0/0/0
+ {% elif rds['site']['primary_wan_type'] == 'isp1' -%}
+ description ISP1_PRIMARY_ROUTER
+ {% else -%}
+ description ISP1_WAN
+ {% endif -%}
+ switchport mode trunk
+ no shutdown
+!
+interface GigabitEthernet2/0/{{port_num}}
+ {% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+ description R02_Gi0/0/0
+ {% elif rds['site']['secondary_wan_type'] == 'isp1' -%}
+ description ISP1_SECONDARY_ROUTER
+ {% elif rds['site']['secondary_wan_type'] == 'isp2' -%}
+ description ISP2_SECONDARY_ROUTER
+ {% else -%}
+ description SECONDARY_WAN
+ {% endif -%}
+ switchport mode trunk
+ no shutdown
+!
+{% for idf in range(1,rds['idf']|length) -%}
+interface Po{{idf}}
+ description IDF{{idf}}
+ switchport mode trunk
+ no shutdown
+!
+interface GigabitEthernet1/0/{{idf}}
+ description IDF{{idf}}
+ switchport mode trunk
+ channel-group {{idf}} mode active
+ no shutdown
+!
+interface GigabitEthernet2/0/{{idf}}
+ description IDF{{idf}}
+ switchport mode trunk
+ channel-group {{idf}} mode active
+ no shutdown
+!
+{% endfor -%}
+{% if rds['idf'][0]['switch_count'] != '0' -%}
+interface Po{{port_num - 1}}
+ description MDF_ACCESS_SWITCH
+ switchport mode trunk
+ no shutdown
+!
+interface GigabitEthernet1/0/{{port_num - 1}}
+ description MDF_ACCESS_SWITCH
+ switchport mode trunk
+ channel-group {{port_num - 1}} mode active
+ no shutdown
+!
+interface GigabitEthernet2/0/{{port_num - 1}}
+ description MDF_ACCESS_SWITCH
+ switchport mode trunk
+ channel-group {{port_num - 1}} mode active
+ no shutdown
+!
+interface range GigabitEthernet1/0/{{rds['idf']|length +1}} - {{port_num - 1}}
+ description RESERVED
+ switchport mode trunk
+ shutdown
+!
+interface range GigabitEthernet2/0/{{rds['idf']|length +1}} - {{port_num - 1}}
+ description RESERVED
+ switchport mode trunk
+ shutdown
+!
+{% else -%}
+interface range GigabitEthernet1/0/{{rds['idf']|length +1}} - {{port_num}}
+ description RESERVED
+ switchport mode trunk
+ shutdown
+interface range GigabitEthernet2/0/{{rds['idf']|length +1}} - {{port_num}}
+ description RESERVED
+ switchport mode trunk
+ shutdown
+!
+{% endif -%}
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+interface Vlan{{rds['vlan'][1]['vlan_id']}}
+ ip address {{rds['vlan'][1]['net'] | ip_and_mask(rds['vlan'][1]['mask'], 5, " ")}}
+ no shutdown
+!
+ip default-gateway {{rds['vlan'][1]['net'] | ip_increment(1)}}
+!
+line con 0
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+line vty 0 15
+ exec-timeout 15 0
+ session-timeout 15
+ login
+!
+ntp source Vlan{{rds['vlan'][1]['vlan_id']}}
+ntp server 10.0.123.1 prefer
+ntp server 10.0.123.2
+end

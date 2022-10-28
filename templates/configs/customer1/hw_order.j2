@@ -1,0 +1,147 @@
+{# START: WAN variables ======================================================================== -#}
+{% if rds['site']['primary_wan_type'] == 'mpls' -%}
+    {% if rds['wan'][0]['physical_handoff'] == 'mmf' -%}
+        {% set wan1_sfp = '1xGLC-SX-MMD, ' -%}
+    {% elif rds['wan'][0]['physical_handoff'] == 'smf' -%}
+        {% set wan1_sfp = '1xGLC-LH-SMD, ' -%}
+    {% elif rds['wan'][0]['physical_handoff'] == 'copper' -%}
+        {% set wan1_sfp = '' -%}
+    {% endif -%}
+    {% if rds['wan'][0]['router'] in ['isr4331', 'isr4431'] -%}
+        {% if rds['wan'][0]['speed']|int < 50001 -%}
+            {% set wan1_isr_type = ' up to 50Mb' -%}
+        {% elif rds['wan'][0]['speed']|int < 150001 -%}
+            {% set wan1_isr_type = ' up to 150Mb' -%}
+        {% elif rds['wan'][0]['speed']|int < 200001 -%}
+            {% set wan1_isr_type = ' up to 200Mb' -%}
+        {% elif rds['wan'][0]['speed']|int < 1000001 -%}
+            {% set wan1_isr_type = ' up to 1Gb' -%}
+        {% else %}
+            {% set wan1_isr_type = '_UNSUPPORTED_PORT_SPEED_' -%}
+        {% endif -%}
+    {% else -%}
+        {% set wan1_isr_type = '' -%}
+    {% endif -%}
+{% endif -%}
+{% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+    {% if rds['wan'][1]['physical_handoff'] == 'mmf' -%}
+        {% set wan2_sfp = '1xGLC-SX-MMD, ' -%}
+    {% elif rds['wan'][1]['physical_handoff'] == 'smf' -%}
+        {% set wan2_sfp = '1xGLC-LH-SMD, ' -%}
+    {% elif rds['wan'][1]['physical_handoff'] == 'copper' -%}
+        {% set wan2_sfp = '' -%}
+    {% endif -%}
+    {% if rds['wan'][1]['router'] in ['isr4331', 'isr4431'] -%}
+        {% if rds['wan'][1]['speed']|int < 50001 -%}
+            {% set wan2_isr_type = ' up to 50Mb' -%}
+        {% elif rds['wan'][1]['speed']|int < 150001 -%}
+            {% set wan2_isr_type = ' up to 150Mb' -%}
+        {% elif rds['wan'][1]['speed']|int < 200001 -%}
+            {% set wan2_isr_type = ' up to 200Mb' -%}
+        {% elif rds['wan'][1]['speed']|int < 1000001 -%}
+            {% set wan2_isr_type = ' up to 1Gb' -%}
+        {% else %}
+            {% set wan2_isr_type = '_UNSUPPORTED_PORT_SPEED_' -%}
+        {% endif -%}
+    {% else -%}
+        {% set wan2_isr_type = '' -%}
+    {% endif -%}
+{% endif -%}
+{# END: WAN variables ========================================================================== -#}
+{# START: LAN variables ======================================================================== -#}
+{% if rds['idf'][0]['switch_count'] != '0' and not wan_only-%}
+    {% set mdf_lan_sfp = '1xGLC-TE, ' -%}
+{% else -%}
+    {% set mdf_lan_sfp = '' -%}
+{% endif -%}
+{# END: LAN variables ========================================================================== -#}
+{% if rds['site']['primary_wan_type'] == 'mpls' -%}
+WAN:
+1xCISCO{{rds['wan'][0]['router']|upper}}{{wan1_isr_type}}, {{wan1_sfp}}{{rds['site']['code']}}_R{{ rds['wan'][0]['router_num'] }}, {{device_naming}}rt01, {{rds['wan'][0]['loopback_ip']}}
+{% endif -%}
+{% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+1xCISCO{{rds['wan'][1]['router']|upper}}{{wan2_isr_type}}, {{wan2_sfp}}{{rds['site']['code']}}_R{{ rds['wan'][1]['router_num'] }}, {{device_naming}}rt02, {{rds['wan'][1]['loopback_ip']}}
+{% endif -%}
+{% if not wan_only -%}
+{% if collapsed_distro == 0 and rds['idf']|length < 10 -%}
+MDF:
+1xWS-C3850-12S-S, stacked, {{ mdf_lan_sfp }}{{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-1, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+1xWS-C3850-12S-S, stacked, {{ mdf_lan_sfp }}{{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-2, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% elif collapsed_distro == 0 and rds['idf']|length >= 10 -%}
+MDF:
+1xWS-C3850-24S-S, stacked, {{ mdf_lan_sfp }}{{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-1, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+1xWS-C3850-24S-S, stacked, {{ mdf_lan_sfp }}{{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-2, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% endif -%}
+{% for idf_num in range(rds['idf']|length) -%}
+{% if idf_num == 0 and collapsed_distro == 1 and rds['idf'][0]['switch_count'] in ['0.55', '1'] -%}
+MDF:
+1xWS-C3650-24PS-S /30W, stacked, {{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-1, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+1xWS-C3650-24PS-S /30W, stacked, {{rds['idf']|length -1}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-2, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% elif idf_num == 0 and collapsed_distro == 1 -%}
+MDF:
+1xWS-C3650-48PS-S /30W, stacked, {{uplink_utilization[0]}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-1, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% for stack_num in range(2, rds['idf'][0]['switch_count']|int +1) -%}
+{% if uplink_utilization[stack_num-1] > 0 -%}
+1xWS-C3650-48PS-S /30W, stacked, {{uplink_utilization[stack_num-1]}}xGLC-SX-MMD, {{rds['site']['code']}}_S01-{{stack_num}}, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% else -%}
+1xWS-C3650-48PS-S /30W, stacked, {{rds['site']['code']}}_S01-{{stack_num}}, {{device_naming}}sw01, {{rds['vlan'][1]['net'] | ip_increment(5)}}
+{% endif -%}
+{% endfor -%}
+{% elif idf_num == 0 and rds['idf'][0]['switch_count'] == '0.55' -%}
+MDF:
+1xWS-C3650-24PS-S /30W, no stack, 2xGLC-TE, {{rds['site']['code']}}_S02-1, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+{% elif idf_num == 0 and rds['idf'][0]['switch_count'] == '1' -%}
+MDF:
+1xWS-C3650-48PS-S /30W, no stack, 2xGLC-TE, {{rds['site']['code']}}_S02-1, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+{% elif idf_num == 0 and rds['idf'][0]['switch_count'] == '2' -%}
+MDF:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-TE, {{rds['site']['code']}}_S02-1, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-TE, {{rds['site']['code']}}_S02-2, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+{% elif idf_num == 0 -%}
+MDF:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-TE, {{rds['site']['code']}}_S02-1, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-TE, {{rds['site']['code']}}_S02-2, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+{% for stack_num in range(3, rds['idf'][0]['switch_count']|int +1) -%}
+1xWS-C3650-48PS-S /30W, stacked, {{rds['site']['code']}}_S02-{{stack_num}}, {{device_naming}}sw02, {{rds['vlan'][1]['net'] | ip_increment(6)}}
+{% endfor -%}
+{% elif idf_num+2-collapsed_distro < 10 -%}
+{% if rds['idf'][idf_num]['switch_count'] == '0.55' -%}
+IDF{{idf_num}}:
+1xWS-C3650-24PS-S /30W, no stack, 2xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% elif rds['idf'][idf_num]['switch_count'] == '1' -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, no stack, 2xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% elif rds['idf'][idf_num]['switch_count'] == '2' -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-2, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% else -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-2, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% for stack_num in range(3, rds['idf'][idf_num]['switch_count']|int +1) -%}
+1xWS-C3650-48PS-S /30W, stacked, {{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-{{stack_num}}, {{device_naming}}sw0{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% endfor -%}
+{% endif -%}
+{% else -%}
+{% if rds['idf'][idf_num]['switch_count'] == '0.55' -%}
+IDF{{idf_num}}:
+1xWS-C3650-24PS-S /30W, no stack, 2xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% elif rds['idf'][idf_num]['switch_count'] == '1' -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, no stack, 2xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% elif rds['idf'][idf_num]['switch_count'] == '2' -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-2, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% else -%}
+IDF{{idf_num}}:
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-1, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+1xWS-C3650-48PS-S /30W, stacked, 1xGLC-SX-MMD, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-2, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% for stack_num in range(3, rds['idf'][idf_num]['switch_count']|int +1) -%}
+1xWS-C3650-48PS-S /30W, stacked, {{rds['site']['code']}}_S{{idf_num+2-collapsed_distro}}-{{stack_num}}, {{device_naming}}sw{{idf_num+2-collapsed_distro}}, {{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}
+{% endfor -%}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
+{% endif -%}

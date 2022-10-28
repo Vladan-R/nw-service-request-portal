@@ -1,0 +1,50 @@
+=========================
+{% if wan_only -%}
+    WAN upgrade
+{% else -%}
+    New site install
+{% endif -%}
+=========================
+|
+| This is a {{rds['business_unit']|upper}} site.
+| 
+| -> primary connection is {{rds['site']['primary_wan_type']|upper}} 
+| -> secondary connection is {{rds['site']['secondary_wan_type']|upper}} 
+|
+|
+=============================
+1. Have onsite technician
+   a) locate the WAN handoff
+   b) make sure the cable is long enough to reach the rack
+   c) rack & stack the equipment
+   d) apply config files
+   e) connect the equipment according to the diagram
+
+=============================
+2. Perform usual post checks according to current working instructions.
+
+=============================
+INVENTORY SCOPE:
+
+{% if rds['site']['primary_wan_type'] == 'mpls' -%}
+{{rds['wan'][0]['loopback_ip']}}	{{rds['site']['code']}}_R01	{{device_naming}}rt01	| {{rds['business_unit']|upper}} - CISCO{{rds['wan'][0]['router']|upper}} - {{rds['site']['location']}}
+{% endif -%}
+{% if rds['site']['secondary_wan_type'] == 'mpls' -%}
+{{rds['wan'][0]['loopback_ip']}}	{{rds['site']['code']}}_R01	{{device_naming}}rt01	| {{rds['business_unit']|upper}} - CISCO{{rds['wan'][1]['router']|upper}} - {{rds['site']['location']}}
+{% endif -%}
+{% if not wan_only -%}
+{% if collapsed_distro == 0 and rds['idf']|length < 10 -%}
+{{rds['vlan'][1]['net'] | ip_increment(5)}}	{{rds['site']['code']}}_S01-1	{{device_naming}}sw01	| {{rds['business_unit']|upper}} - 2X-WS-C3850-12S-S - {{rds['site']['location']}}
+{% elif collapsed_distro == 0 and rds['idf']|length >= 10 -%}
+{{rds['vlan'][1]['net'] | ip_increment(5)}}	{{rds['site']['code']}}_S01-1	{{device_naming}}sw01	| {{rds['business_unit']|upper}} - 2X-WS-C3850-12S-S - {{rds['site']['location']}}
+{% endif -%}
+{% for idf_num in range(rds['idf']|length) -%}
+{% if idf_num == 0 and collapsed_distro == 1 and rds['idf'][idf_num]['switch_count'] in ['0.55', '1'] -%}
+{{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}	{{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1	{{device_naming}}sw0{{idf_num+2-collapsed_distro}}	| {{rds['business_unit']|upper}} - 2X-WS-C3650-24PS-S - {{rds['site']['location']}}
+{% elif rds['idf'][idf_num]['switch_count'] == '0.55' -%}
+{{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}	{{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1	{{device_naming}}sw0{{idf_num+2-collapsed_distro}}	| {{rds['business_unit']|upper}} - 1X-WS-C3650-24PS-S - {{rds['site']['location']}}
+{% else -%}
+{{rds['vlan'][1]['net'] | ip_increment(idf_num+2-collapsed_distro+4)}}	{{rds['site']['code']}}_S0{{idf_num+2-collapsed_distro}}-1	{{device_naming}}sw0{{idf_num+2-collapsed_distro}}	| {{rds['business_unit']|upper}} - {{rds['idf'][idf_num]['switch_count']}}X-WS-C3650-48PS-S - {{rds['site']['location']}}
+{% endif -%}
+{% endfor -%}
+{% endif -%}

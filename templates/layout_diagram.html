@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+    <head>
+        {% include 'meta.html' %}
+        <title>NW Site Staging Portal</title>
+        <link rel="stylesheet" href="{{url_for('static',filename='css/bootstrap.css')}}">
+        {% block styles %}
+        {% endblock %}
+    </head>
+    <body>
+        <header>
+            <div class="container-fluid">
+                <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                    <a class="navbar-brand" href="#">
+                        <img src="{{url_for('static',filename='img/app-logo-low-resolution-logo-white-on-transparent-background.png')}}" width="110" height="64" alt="">
+                    </a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                      <span class="navbar-toggler-icon"></span>
+                    </button>
+                  
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                      <ul class="navbar-nav mr-auto">
+                        <li class="nav-item active">
+                          <a class="nav-link" href="{{ url_for('home') }}">Home <span class="sr-only">(current)</span></a>
+                        </li>
+                        <li class="nav-item active">
+                          <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                        </li>
+                        <li class="nav-item active dropdown">
+                          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Customer1
+                          </a>
+                          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('rds_form_customer1') }}">Service Request Data Form</a>
+                            <a class="dropdown-item" href="{{ url_for('rds_upload_customer1') }}">Engineering Upload</a>
+                            <a class="dropdown-item" href="{{ url_for('diagram_upload_customer1') }}">Network Diagram</a>
+                          </div>
+                        </li>
+                      </ul>
+                      <span class="navbar-text">
+                        NW Site Staging Portal
+                      </span>
+                    </div>
+                  </nav>
+            </div>
+        </header>
+        <div class="container-fluid">
+            {% block content %}
+            {% endblock %}
+        </div>
+        <script src="{{url_for('static',filename='js/jquery-3.4.1.js')}}"></script>
+        <script src="{{url_for('static',filename='js/bootstrap.bundle.js')}}"></script>
+        {% block scripts %}
+        {% endblock %}
+    </body>
+</html>

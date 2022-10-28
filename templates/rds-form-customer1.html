@@ -1,0 +1,285 @@
+{% extends "layout.html" %}
+{% from "_util_forms.html" import render_field, render_field_table_vertical, render_field_table_horizontal_no_label %}
+
+
+{% block content %}
+<div class="row mt-3">
+    <h1>Required Data Set</h1>
+</div>
+<br>
+<div class="rdsFormWrapper">
+    <form class= "form" method="POST" action="/customer1/rds-form">
+        {{ form.csrf_token }}
+        <div id="service_request" class="d-table row col-6">
+            <h2>Service Request</h2>
+            {{ render_field_table_vertical(form.sr_num) }}
+            {{ render_field_table_vertical(form.userid) }}
+            {{ render_field_table_vertical(form.business_unit) }}
+        </div>
+        <div id="site" class="d-table row col-6 mt-3">
+            <h2>Site</h2>
+            {{ render_field_table_vertical(form.site.code) }}
+            {{ render_field_table_vertical(form.site.alias) }}
+            {{ render_field_table_vertical(form.site.location) }}   
+            {{ render_field_table_vertical(form.site.critical) }}
+        </div>
+        <div id="wan_labels" class="row mt-3">
+            <div class="d-table col-6">
+                <h2>Primary WAN</h2>
+                {{ render_field_table_vertical(form.site.primary_wan_type) }}
+            </div>
+            <div class="d-table col-6">
+                <h2>Secondary WAN</h2>
+                {{ render_field_table_vertical(form.site.secondary_wan_type) }}
+            </div>
+        </div>
+        <div id="wans" class="row">
+            <div id="primary_wan_placeholder" class="col-6 nopadding">
+                <div id="primary_wan" class="d-table col-12">
+                    {{ render_field_table_vertical(form.wan[0].logical_handoff) }}
+                    {{ render_field_table_vertical(form.wan[0].transit_vlan) }}
+                    {{ render_field_table_vertical(form.wan[0].physical_handoff) }}
+                    {{ render_field_table_vertical(form.wan[0].access_id) }}
+                    {{ render_field_table_vertical(form.wan[0].port_id) }}
+                    {{ render_field_table_vertical(form.wan[0].speed) }}
+                    {{ render_field_table_vertical(form.wan[0].pe_as) }}
+                    {{ render_field_table_vertical(form.wan[0].net) }}
+                    {{ render_field_table_vertical(form.wan[0].mask) }} 
+                    {{ render_field_table_vertical(form.wan[0].router) }}
+                    {{ render_field_table_vertical(form.wan[0].router_num) }}
+                    {{ render_field_table_vertical(form.wan[0].loopback_ip) }}
+                    {{ render_field_table_vertical(form.wan[0].ce_as) }}
+                </div>
+            </div>
+            <div id="secondary_wan_placeholder" class="col-6 nopadding">
+                <div id="secondary_wan" class="d-table col-12">
+                    {% if form.wan[1] %}
+                        {{ render_field_table_vertical(form.wan[1].logical_handoff) }}
+                        {{ render_field_table_vertical(form.wan[1].transit_vlan) }}
+                        {{ render_field_table_vertical(form.wan[1].physical_handoff) }}
+                        {{ render_field_table_vertical(form.wan[1].access_id) }}
+                        {{ render_field_table_vertical(form.wan[1].port_id) }}
+                        {{ render_field_table_vertical(form.wan[1].speed) }}
+                        {{ render_field_table_vertical(form.wan[1].pe_as) }}
+                        {{ render_field_table_vertical(form.wan[1].net) }}
+                        {{ render_field_table_vertical(form.wan[1].mask) }} 
+                        {{ render_field_table_vertical(form.wan[1].router) }}
+                        {{ render_field_table_vertical(form.wan[1].router_num) }}
+                        {{ render_field_table_vertical(form.wan[1].loopback_ip) }}
+                        {{ render_field_table_vertical(form.wan[1].ce_as) }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div id="vlanlabel" class="row mt-3">
+            <h2>
+                Vlans
+                <a href="#vlanlabel" class="btn btn-outline-primary btn-sm ml-3" onclick="addVlan()"><strong>+</strong></a>
+                <a href="#vlanlabel" class="btn btn-outline-secondary btn-sm ml-1 px-2" onclick="removeVlan()"><strong>-</strong></a>
+            </h2>
+        </div>       
+        <div id="vlans" class="d-table row">
+            <div class="d-table-row col-12" id="vlan_table_header">
+                <span class="d-table-cell">ID</span>
+                <span class="d-table-cell">Name</span>
+                <span class="d-table-cell">Network address</span>
+                <span class="d-table-cell">Network mask</span>
+            </div>            
+            {% for vlan in form.vlan %}
+                <div class="d-table-row col-12" id="vlan_table_line_{{vlan.id}}">
+                    {{ render_field_table_horizontal_no_label(vlan.vlan_id) }}
+                    {{ render_field_table_horizontal_no_label(vlan.vlan_name) }}
+                    {{ render_field_table_horizontal_no_label(vlan.net) }}
+                    {{ render_field_table_horizontal_no_label(vlan.mask) }}
+                </div>
+            {% endfor %}
+        </div>
+        <div id="lan_labels" class="row mt-3">
+            <div class="d-table col-6">
+                <h2>
+                    IDFs
+                    <a href="#idflabel" class="btn btn-outline-primary btn-sm ml-3" onclick="addIdf()"><strong>+</strong></a>
+                    <a href="#idflabel" class="btn btn-outline-secondary btn-sm ml-1 px-2" onclick="removeIdf()"><strong>-</strong></a>
+                </h2>
+            </div>
+            <div class="d-table col-6">
+                <h2>LAN ports reservation</h2>
+            </div>
+        </div>
+        <div id="lan_items" class="row mt-1">
+            <div id="idfs" class="d-table row col-4"> 
+                {% for idf in form.idf %}
+                    {{ render_field_table_vertical(idf.switch_count) }}
+                {% endfor %}
+            </div>
+            <div id="lanports" class="col-4 offset-2">
+                {{ render_field_table_vertical(form.lanports.printer) }}
+                {{ render_field_table_vertical(form.lanports.camera) }}
+                {{ render_field_table_vertical(form.lanports.server) }}
+            </div>
+        </div>
+        {{ render_field(form.note) }}
+        {{ form.submit(class='btn btn-primary my-3') }}
+    </form>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+// Renumber secondary wan elements
+//$("#secondary_wan").html($("#secondary_wan").html().replace(/wan-0/g,"wan-1"));
+
+// save primary and secondary WAN elements
+    var primaryWan = $("#primary_wan");
+    var secondaryWan = $("#secondary_wan");
+    var pTransitVlan = $("#div_wan-0-transit_vlan");
+    var sTransitVlan = $("#div_wan-1-transit_vlan");
+
+// populate secondary WAN elements when the form is loaded for the first time
+    if (secondaryWan.children().length < 1){
+        //console.log("if triggered")
+        secondaryWan.html(primaryWan.html().replace(/wan-0/g,"wan-1"))
+    };
+
+    
+// set VLAN values and change them when business unit changes
+    setVlans();
+    $("#business_unit").change(function(){
+        setVlans();
+    });
+
+// Add or remove transit VLAN option based on the logical handoff type
+    if ($("#wan-0-logical_handoff").val() != "vlan"){
+        pTransitVlan = $("#div_wan-0-transit_vlan").detach();
+    };
+    $("#wan-0-logical_handoff").change(function(){
+        if ($( this ).val() == "vlan"){
+            pTransitVlan.insertAfter("#div_wan-0-logical_handoff")
+        }
+        else {
+            pTransitVlan = $("#div_wan-0-transit_vlan").detach();
+        }
+    });
+
+// Add or remove transit VLAN option based on the logical handoff type
+    if ($("#wan-1-logical_handoff").val() != "vlan"){
+        sTransitVlan = $("#div_wan-1-transit_vlan").detach();
+    };
+    $("#wan-1-logical_handoff").change(function(){
+        if ($( this ).val() == "vlan"){
+            sTransitVlan.insertAfter("#div_wan-1-logical_handoff")
+	    }
+	    else {
+            sTransitVlan = $("#div_wan-1-transit_vlan").detach();
+        }
+    });
+
+// Add or remove Primary WAN form based on WAN type selection
+    if ($("#site-primary_wan_type").val() != "mpls"){
+        primaryWan = $("#primary_wan").detach();
+    };
+    $("#site-primary_wan_type").change(function(){
+        if ($( this ).val() == "mpls"){
+            primaryWan.appendTo("#primary_wan_placeholder")
+	    }
+	    else {
+            if ($("#primary_wan").html()){
+                primaryWan = $("#primary_wan").detach();
+            }
+        }
+    });
+
+// Add or remove Secondary WAN form based on WAN type selection
+    if ($("#site-secondary_wan_type").val() != "mpls"){
+        secondaryWan = $("#secondary_wan").detach();
+    };
+    $("#site-secondary_wan_type").change(function(){
+        if ($( this ).val() == "mpls"){
+            secondaryWan.appendTo("#secondary_wan_placeholder")
+	    }
+	    else {
+            if ($("#secondary_wan").html()){
+                secondaryWan = $("#secondary_wan").detach();
+            }
+        }
+    });
+
+// Add a line to the VLAN table
+    var vlanField = `<div class="d-table-row col-12" id="vlan_table_line_{{form.vlan[0].id}}">
+                        {{ render_field_table_horizontal_no_label(form.vlan[0].vlan_id) }}
+                        {{ render_field_table_horizontal_no_label(form.vlan[0].vlan_name) }}
+                        {{ render_field_table_horizontal_no_label(form.vlan[0].net) }}
+                        {{ render_field_table_horizontal_no_label(form.vlan[0].mask) }}
+                    </div>`;
+    console.log(vlanField);
+    function addVlan(){
+        var vlanListNum = $("#vlans").children().length -1;
+        vlanField = vlanField.replace(/Vlan-\d+/g,"");
+        vlanField = vlanField.replace(/vlan-\d+/g,"vlan-" + vlanListNum);
+        $("#vlans").append(vlanField);
+        setVlans();
+    }
+
+// Remove the last line from VLAN table
+    function removeVlan(){
+        if  ($("#vlans").children().length > 3){
+            $("#vlans").children().last().remove();
+            setVlans();
+        }
+    }
+
+    function setVlans(){
+        if ($("#business_unit").val() == 'bu1'){
+            $("#vlan-0-vlan_id").val('10');
+            $("#vlan-0-vlan_name").val('DATA');
+            $("#vlan-1-vlan_id").val('20');
+            $("#vlan-1-vlan_name").val('MGMT');
+            $("#vlan-2-vlan_id").val('30');
+            $("#vlan-2-vlan_name").val('VOICE');
+            $("#vlan-3-vlan_id").val('40');
+            $("#vlan-3-vlan_name").val('PERIPHERAL1');
+            $("#vlan-4-vlan_id").val('51');
+            $("#vlan-4-vlan_name").val('PERIPHERAL2');
+            $("#vlan-5-vlan_id").val('52');
+            $("#vlan-5-vlan_name").val('PERIPHERAL3');
+            $("#vlan-6-vlan_id").val('53');
+            $("#vlan-6-vlan_name").val('PERIPHERAL4');
+            $("#vlan-7-vlan_id").val('54');
+            $("#vlan-7-vlan_name").val('PERIPHERAL5');
+            $("#vlan-8-vlan_id").val('55');
+            $("#vlan-8-vlan_name").val('PERIPHERAL6');
+        } else {
+            $("#vlan-0-vlan_id").val('100');
+            $("#vlan-0-vlan_name").val('USER');
+            $("#vlan-1-vlan_id").val('150');
+            $("#vlan-1-vlan_name").val('MGMT');
+            $("#vlan-2-vlan_id").val('300');
+            $("#vlan-2-vlan_name").val('VOICE');
+            $("#vlan-3-vlan_id").val('210');
+            $("#vlan-3-vlan_name").val('PERIPHERAL1');
+            $("#vlan-4-vlan_id").val('220');
+            $("#vlan-4-vlan_name").val('PERIPHERAL2');
+            $("#vlan-5-vlan_id").val('230');
+            $("#vlan-5-vlan_name").val('PERIPHERAL3');
+        }
+    }
+
+// Add a line to the IDF table
+    var idfField = `{{ render_field_table_vertical(form.idf[0].switch_count) }}`;
+    //console.log(idfField);
+    function addIdf(){
+        var idfListNum = $("#idfs").children().length;
+        idfField = idfField.replace(/Idf-\d+/g,"");
+        idfField = idfField.replace(/idf-\d+/g,"idf-" + idfListNum);
+        $("#idfs").append(idfField);
+    }
+
+// Remove the last line from IDF table
+    function removeIdf(){
+        if  ($("#idfs").children().length > 1){
+            $("#idfs").children().last().remove();
+        }
+    }
+</script>
+{% endblock %}

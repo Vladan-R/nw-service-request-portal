@@ -1,0 +1,20 @@
+version: '2'
+services:
+
+  portal:
+    image: cdde-portal
+    build:
+      context: .
+      dockerfile: Dockerfile-portal
+    volumes:
+      - "./:/portal"
+
+  nginx:
+    image: nginx-gateway
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+    ports:
+      - 80:80
+    depends_on:
+      - portal
