@@ -45,7 +45,6 @@ interface {{wan_active_int}}.{{rds['wan'][0]['transit_vlan']}}
  encapsulation dot1Q {{rds['wan'][0]['transit_vlan']}}
  ip address {{rds['wan'][0]['net'] | ip_and_mask(rds['wan'][0]['mask'], 2, " ")}}
  no shutdown
-{% endif -%}
 !
 track 1 interface {{wan_active_int}} line-protocol
 !
